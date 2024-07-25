@@ -5,7 +5,10 @@ namespace App\Http\Controllers\API;
 use App\Http\Controllers\Controller;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Validator;
-class PostController extends Controller
+use App\Models\Post;
+use App\Http\Controllers\API\BaseController as BaseController;
+
+class PostController extends BaseController
 {
     /**
      * Display a listing of the resource.
@@ -13,13 +16,7 @@ class PostController extends Controller
     public function index()
     {
         $data = Post::all();
-        return response()-json([
-
-            'status' => true,
-            'message' => 'All Post Dta',
-            'data' => $user
-
-        ] , 200);
+        return $this->sendMessage($data , 'All Posts Data');
     }
 
     /**
@@ -37,12 +34,7 @@ class PostController extends Controller
 
         if($validator->fails()){
 
-            return response()->json([
-
-                'status' => false,
-                'message' => 'Validation Error',
-                'error' => $validator->errors()->all()
-            ]);
+            return $this->sendError('Validation Error' , $validator->errors()->all());
         }
 
         $img = $request->image;
@@ -53,18 +45,15 @@ class PostController extends Controller
         $post = Post::create([
 
             'name' => $request->name,
-            'descripton' => $request->descripton,
+            'description' => $request->description,
             'image' => $imgName
 
         ]);
 
-        return response()->json([
+        return $this->sendMessage($post , 'Post Created Successfully');
 
-            'status' => true,
-            'message' => 'Post Created Successfully',
-            'post' => $post
-        ]);
     }
+
 
     /**
      * Display the specified resource.
@@ -72,12 +61,7 @@ class PostController extends Controller
     public function show(string $id)
     {
         $singlePost = Post::select('id' , 'name' , 'description' , 'image')->where('id' , $id)->get();
-        return response()->json([
-
-            'status' => true,
-            'message' => 'Your Single Post',
-            'post' => $singlePost
-        ]);
+        return $this->sendMessage($singlePost , 'Your Single Post');
     }
 
     /**
@@ -95,20 +79,17 @@ class PostController extends Controller
 
         if($validator->fails()){
 
-            return response()->json([
+            return $this->sendError('Validation Error' , $validator->errors()->all());
 
-                'status' => false,
-                'message' => 'Validation Error',
-                'error' => $validator->errors()->all()
-            ] , 405);
         }
 
-        $post = Post::select('id' , 'image')->get();
+        $postImage = Post::select('id' , 'image')->where('id' , $id)->get();
+        
 
         if($request->image != ''){
             $path = public_path(). '/uploads';
-            if($post->image != '' && $post->image != null){
-                $old_file = $path. $post->image;
+            if($postImage[0]->image != '' && $postImage[0]->image != null){
+                $old_file = $path. $postImage[0]->image;
                 if(file_exists($old_file)){
                     unlink($old_file);
                 }
@@ -120,24 +101,21 @@ class PostController extends Controller
             $img->move(public_path(). '/uploads',$imgName);
         }
         else{
-            $imgName = $post->image;
+            $imgName = $postImage->image;
         }
 
 
         $post = Post::where('id' , $id)->update([
 
             'name' => $request->name,
-            'descripton' => $request->descripton,
+            'description' => $request->description,
             'image' => $imgName
 
         ]);
 
-        return response()->json([
 
-            'status' => true,
-            'message' => 'Post Updated Successfully',
-            'post' => $post
-        ]);
+        return $this->sendMessage($post , 'Post Updated Successfully');
+
     }
 
     /**
@@ -146,15 +124,12 @@ class PostController extends Controller
     public function destroy(string $id)
     {
         $imagePath = Post::select('image')->where('id' , $id)->get();
-        $filePath = public_path(). '/uploads' . $imagePath[0]['image'];
+        $filePath = public_path(). '/uploads/' . $imagePath[0]['image'];
         unlink($filePath);
 
         $post = Post::where('id' , $id)->delete();
 
-        return response()->json([
-
-            'status' => true,
-            'message' => 'Post Deleted Successfully',
-        ]);
+        return $this->sendMessage($post , 'Post Deleted Successfully');
+        
     }
 }
